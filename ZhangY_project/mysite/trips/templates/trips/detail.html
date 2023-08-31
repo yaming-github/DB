@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .photo-wall {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .photo {
+            margin: 10px;
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .image-up {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 8vh; /* 设置 div 高度为视口高度 */
+        }
+
+        table {
+            width: 80%;
+            margin: 0 auto; /* 居中对齐 */
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+
+        input[type="text"], input[type="date"], input[type="file"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-right: 10px;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            background-color: #0abab5;
+            color: white;
+            font-size: 14px;
+        }
+
+        .myTable {
+            border-top: 30px solid transparent;
+        }
+
+        .myPTable {
+            border-top: 50px solid transparent;
+        }
+
+        caption {
+            font-size: 1.2em; /* 设置字体大小 */
+            font-weight: bold; /* 设置字体粗细 */
+            text-align: center; /* 设置文字居中对齐 */
+            padding: 10px; /* 设置内边距 */
+            background-color: #0abab5; /* 设置背景颜色 */
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="image-up">
+    <input type="date" id="dateI" placeholder="Date" style="border: 1px solid #ccc;"/>
+    <input type="text" id="city" placeholder="City" list="cities" style="border: 1px solid #ccc;"/>
+    <datalist id="cities"></datalist>
+    <button onclick="addDataCity()">Add</button>
+</div>
+
+
+<div class="myTable">
+    <!-- 在这里创建表格 -->
+    <table id="myTable">
+        <caption>Itinerary</caption>
+        <thead>
+        <tr>
+            <th>Date</th>
+            <th>Cities</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        </tr>
+        <!-- 这里将来将添加数据 -->
+        </tbody>
+    </table>
+</div>
+
+<div class="image-up">
+    <input type="date" id="dateM" placeholder="Date" style="border: 1px solid #ccc;"/>
+    <input type="text" id="rest" placeholder="Restaurant" style="border: 1px solid #ccc;"/>
+    <button onclick="addDataCity()">Add</button>
+</div>
+
+<div class="myTable">
+    <!-- 在这里创建表格 -->
+    <table id="myPTable">
+        <caption>Meals</caption>
+        <thead>
+        <tr>
+            <th>Date</th>
+            <th>Fooooooood</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        </tr>
+        <!-- 这里将来将添加数据 -->
+        </tbody>
+    </table>
+</div>
+
+<div class="image-up">
+    <form id="upload-form">
+        <input type="file" name="image">
+        <button type="submit">Upload</button>
+    </form>
+</div>
+
+<div class="photo-wall">
+    {% load static %}
+</div>
+
+<script>
+    let cities = []
+    let Itinerary = []
+    let meals = []
+    let photos = []
+
+    function getDataCity() {
+        fetch("/api/cities", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                cities = json['data'];
+            })
+            .then(() => {
+                    const datalistElement = document.getElementById('cities'); // 获取 datalist 元素
+                    while (datalistElement.firstChild) datalistElement.removeChild(datalistElement.firstChild)
+                    cities.forEach(city => { // 循环遍历选项数组
+                        const optionElement = document.createElement('option'); // 创建 option 元素
+                        optionElement.id = city.id
+                        optionElement.value = city.name + ', ' + city.state + ', ' + city.country; // 设置 option 元素的值
+                        datalistElement.appendChild(optionElement); // 将 option 元素添加到 datalist 元素中
+                    });
+                }
+            );
+    }
+
+    function getDataI() {
+        fetch("/api/itinerary", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify({"id": getID()})
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                Itinerary = json['data'];
+                renderTableI();
+            });
+    }
+
+    function renderTableI() {
+        const tableBody = document.querySelector("#myTable tbody");
+        tableBody.innerHTML = "";
+
+        Itinerary.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+      <td>${row.date.substring(0, 10)}</td>
+      <td>${row.city}</td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 添加数据到表格
+    function addDataCity() {
+        const date = document.querySelector("#dateI").value;
+        const city = document.querySelector('#cities option[value="' + document.querySelector("#city").value + '"]').id;
+
+        const payload = {"id": getID(), "date": date, "city": city};
+        fetch("/api/addItinerary", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getDataI()
+                } else {
+                    alert('duplicate entry!')
+                }
+            });
+
+        document.querySelector("#dateI").value = "";
+        document.querySelector("#city").value = "";
+    }
+
+    function getDataM() {
+        fetch("/api/meals", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify({"id": getID()})
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                meals = json['data'];
+                renderTableM();
+            });
+    }
+
+    function renderTableM() {
+        const tableBody = document.querySelector("#myPTable tbody");
+        tableBody.innerHTML = "";
+
+        meals.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+      <td>${row.date.substring(0, 10)}</td>
+      <td>${row.meal}</td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function getID() {
+        const uri = window.location.href.split('/')
+        return uri[uri.length - 1]
+    }
+
+    function getData() {
+        fetch("/api/getImage", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify({"id": getID()}),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                photos = data['data']
+                const photoWall = document.querySelector('.photo-wall');
+
+                while (photoWall.firstChild) photoWall.removeChild(photoWall.firstChild)
+                // Create an <img> element for each image URL and add it to the photo wall
+                photos.forEach(photo => {
+                    const img = document.createElement('img');
+                    img.src = `/static/${photo.url}`
+                    img.classList.add('photo');
+                    photoWall.appendChild(img);
+                });
+            });
+    }
+
+    const form = document.querySelector('#upload-form');
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        formData.set("id", getID())
+        fetch('/api/uploadImage', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('error!')
+                }
+            });
+    });
+
+    window.onload = function () {
+        getDataCity();
+        getDataI();
+        getDataM();
+        getData();
+    };
+</script>
+
+</body>
+</html>

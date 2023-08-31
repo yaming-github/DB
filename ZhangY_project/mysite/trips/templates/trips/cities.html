@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>trips</title>
+    <style>
+        table {
+            width: 80%;
+            margin: 0 auto; /* 居中对齐 */
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-right: 10px;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            background-color: #0abab5;
+            color: white;
+            font-size: 14px;
+        }
+
+        .add {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 8vh; /* 设置 div 高度为视口高度 */
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- 在这里添加输入框 -->
+<div class="add">
+    <input type="text" id="name" placeholder="Name" style="border: 1px solid #ccc;"/>
+    <input type="text" id="state" placeholder="State" style="border: 1px solid #ccc;"/>
+    <input type="text" id="country" placeholder="Country" style="border: 1px solid #ccc;"/>
+    <button onclick="addData()">Add</button>
+</div>
+
+<!-- 在这里创建表格 -->
+<table id="myTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>State</th>
+        <th>Country</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    </tr>
+    <!-- 这里将来将添加数据 -->
+    </tbody>
+</table>
+
+<div class="add">
+    <input type="text" id="city" placeholder="City" list="cities" style="border: 1px solid #ccc;"/>
+    <datalist id="cities"></datalist>
+    <input type="text" id="nameR" placeholder="Name" style="border: 1px solid #ccc;"/>
+    <input type="text" id="address" placeholder="Address" style="border: 1px solid #ccc;"/>
+    <input type="text" id="cuisine" placeholder="Cuisine" style="border: 1px solid #ccc;"/>
+    <button onclick="addDataR()">Add</button>
+</div>
+
+<!-- 在这里创建表格 -->
+<table id="resTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>City</th>
+        <th>Name</th>
+        <th>Address</th>
+        <th>Cuisine</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    </tr>
+    <!-- 这里将来将添加数据 -->
+    </tbody>
+</table>
+
+<script>
+    // 定义变量来存储数据
+    let data = [];
+    let dataR = [];
+
+    // 获取数据并渲染表格
+    function getData() {
+        fetch("/api/cities", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                data = json['data'];
+                renderTable();
+            })
+            .then(() => {
+                    const datalistElement = document.getElementById('cities'); // 获取 datalist 元素
+                    while (datalistElement.firstChild) datalistElement.removeChild(datalistElement.firstChild)
+                    data.forEach(city => { // 循环遍历选项数组
+                        const optionElement = document.createElement('option'); // 创建 option 元素
+                        optionElement.id = city.id
+                        optionElement.value = city.name + ', ' + city.state + ', ' + city.country; // 设置 option 元素的值
+                        datalistElement.appendChild(optionElement); // 将 option 元素添加到 datalist 元素中
+                    });
+                }
+            );
+    }
+
+    // 获取数据并渲染表格
+    function getDataR() {
+        fetch("/api/ress", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                dataR = json['data'];
+                renderTableR();
+            });
+    }
+
+    // 渲染表格
+    function renderTable() {
+        const tableBody = document.querySelector("#myTable tbody");
+        tableBody.innerHTML = "";
+
+        data.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-id", row.id);
+            tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.name}</td>
+      <td>${row.state}</td>
+      <td>${row.country}</td>
+      <td>
+        <button onclick="editRow(${row.id})">Edit</button>
+        <button onclick="deleteRow(${row.id})">Delete</button>
+      </td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 渲染表格
+    function renderTableR() {
+        const tableBody = document.querySelector("#resTable tbody");
+        tableBody.innerHTML = "";
+
+        dataR.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-id", row.id);
+            tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.city}</td>
+      <td>${row.name}</td>
+      <td>${row.address}</td>
+      <td>${row.cuisine}</td>
+      <td>
+        <button onclick="editRowR(${row.id})">Edit</button>
+        <button onclick="deleteRowR(${row.id})">Delete</button>
+      </td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 添加数据到表格
+    function addData() {
+        const name = document.querySelector("#name").value;
+        const state = document.querySelector("#state").value;
+        const country = document.querySelector("#country").value;
+
+        if (!name || !state || !country) {
+            alert("Please fill in all fields");
+            return;
+        }
+
+        const payload = {name, state, country};
+        fetch("/api/addCity", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('duplicate entry!')
+                }
+            });
+
+        document.querySelector("#name").value = "";
+        document.querySelector("#state").value = "";
+        document.querySelector("#country").value = "";
+    }
+
+    // 添加数据到表格
+    function addDataR() {
+        const city = document.querySelector('#cities option[value="' + document.querySelector("#city").value + '"]').id;
+        const name = document.querySelector("#nameR").value;
+        const address = document.querySelector("#address").value;
+        const cuisine = document.querySelector("#cuisine").value;
+
+        if (!city || !name || !address || !cuisine) {
+            alert("Please fill in all fields");
+            return;
+        }
+
+        const payload = {city, name, address, cuisine};
+        fetch("/api/addRes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getDataR()
+                } else {
+                    alert('duplicate entry!')
+                }
+            });
+
+        document.querySelector("#city").value = "";
+        document.querySelector("#nameR").value = "";
+        document.querySelector("#address").value = "";
+        document.querySelector("#cuisine").value = "";
+    }
+
+    // 更新数据到表格
+    function updateData(id) {
+        const name = document.querySelector(`#name-${id}`).value;
+        const state = document.querySelector(`#state-${id}`).value;
+        const country = document.querySelector(`#country-${id}`).value;
+
+        const payload = {id, name, state, country};
+        fetch(`/api/updateCity`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 更新数据到表格
+    function updateDataR(id) {
+        const city = document.querySelector('#cities option[value="' + document.querySelector(`#city-${id}`).value + '"]').id;
+        const name = document.querySelector(`#nameR-${id}`).value;
+        const address = document.querySelector(`#address-${id}`).value;
+        const cuisine = document.querySelector(`#cuisine-${id}`).value;
+
+        const payload = {id, city, name, address, cuisine};
+        fetch(`/api/updateRes`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getDataR()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 删除数据
+    function deleteData(id) {
+        fetch(`/api/deleteCity`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({id}),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                    getDataR()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 删除数据
+    function deleteDataR(id) {
+        fetch(`/api/deleteRes`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({id}),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getDataR()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 编辑行
+    function editRow(id) {
+        const tr = document.querySelector(`#myTable tr[data-id="${id}"]`);
+        const nameTd = tr.querySelector("td:nth-child(2)");
+        const stateTd = tr.querySelector("td:nth-child(3)");
+        const countryTd = tr.querySelector("td:nth-child(4)");
+        const actionsTd = tr.querySelector("td:nth-child(5)");
+
+        const name = nameTd.innerHTML;
+        const state = stateTd.innerHTML;
+        const country = countryTd.innerHTML;
+
+        nameTd.innerHTML = `<input type="text" id="name-${id}" value="${name}" />`;
+        stateTd.innerHTML = `<input type="text" id="state-${id}" value="${state}" />`;
+        countryTd.innerHTML = `<input type="text" id="country-${id}" value="${country}" />`;
+        actionsTd.innerHTML = `
+    <button onclick="updateData(${id})">Save</button>
+    <button onclick="cancelEdit(${id},'${name}','${state}', '${country}')">Cancel</button>
+  `;
+    }
+
+    // 编辑行
+    function editRowR(id) {
+        const tr = document.querySelector(`#resTable tr[data-id="${id}"]`);
+        const cityTd = tr.querySelector("td:nth-child(2)");
+        const nameTd = tr.querySelector("td:nth-child(3)");
+        const addressTd = tr.querySelector("td:nth-child(4)");
+        const cuisineTd = tr.querySelector("td:nth-child(5)");
+        const actionsTd = tr.querySelector("td:nth-child(6)");
+
+        const city = cityTd.innerHTML;
+        const name = nameTd.innerHTML;
+        const address = addressTd.innerHTML;
+        const cuisine = cuisineTd.innerHTML;
+
+        cityTd.innerHTML = `<input type="text" id="city-${id}" list="cities" />`;
+        nameTd.innerHTML = `<input type="text" id="nameR-${id}" value="${name}" />`;
+        addressTd.innerHTML = `<input type="text" id="address-${id}" value="${address}" />`;
+        cuisineTd.innerHTML = `<input type="text" id="cuisine-${id}" value="${cuisine}" />`;
+        actionsTd.innerHTML = `
+    <button onclick="updateDataR(${id})">Save</button>
+    <button onclick="cancelEditR(${id},'${city}','${name}','${address}','${cuisine}')">Cancel</button>
+  `;
+    }
+
+    // 取消编辑
+    function cancelEdit(id, name, state, country) {
+        const tr = document.querySelector(`#myTable tr[data-id="${id}"]`);
+        const nameTd = tr.querySelector("td:nth-child(2)");
+        const stateTd = tr.querySelector("td:nth-child(3)");
+        const countryTd = tr.querySelector("td:nth-child(4)");
+        const actionsTd = tr.querySelector("td:nth-child(5)");
+
+        nameTd.innerHTML = name;
+        stateTd.innerHTML = state;
+        countryTd.innerHTML = country
+        actionsTd.innerHTML = `
+    <button onclick="editRow(${id})">Edit</button>
+    <button onclick="deleteRow(${id})">Delete</button>
+  `;
+    }
+
+    // 取消编辑
+    function cancelEditR(id, city, name, address, cuisine) {
+        const tr = document.querySelector(`#resTable tr[data-id="${id}"]`);
+        const cityTd = tr.querySelector("td:nth-child(2)");
+        const nameTd = tr.querySelector("td:nth-child(3)");
+        const addressTd = tr.querySelector("td:nth-child(4)");
+        const cuisineTd = tr.querySelector("td:nth-child(5)");
+        const actionsTd = tr.querySelector("td:nth-child(6)");
+
+        cityTd.innerHTML = city;
+        nameTd.innerHTML = name;
+        addressTd.innerHTML = address;
+        cuisineTd.innerHTML = cuisine;
+        actionsTd.innerHTML = `
+    <button onclick="editRowR(${id})">Edit</button>
+    <button onclick="deleteRowR(${id})">Delete</button>
+  `;
+    }
+
+    // 删除行
+    function deleteRow(id) {
+        const confirmDelete = confirm("Are you sure you want to delete this row?");
+        if (confirmDelete) {
+            deleteData(id);
+        }
+    }
+
+    // 删除行
+    function deleteRowR(id) {
+        const confirmDelete = confirm("Are you sure you want to delete this row?");
+        if (confirmDelete) {
+            deleteDataR(id);
+        }
+    }
+
+    // 页面加载时获取数据
+    window.onload = function () {
+        getData();
+        getDataR()
+    };
+
+</script>
+</body>
+</html>

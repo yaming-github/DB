@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>trips</title>
+    <style>
+        table {
+            width: 80%;
+            margin: 0 auto; /* 居中对齐 */
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+
+        input[type="text"], input[type="date"], input[type="email"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-right: 10px;
+            width: 200px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            background-color: #0abab5;
+            color: white;
+            font-size: 14px;
+        }
+
+        .add {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 8vh; /* 设置 div 高度为视口高度 */
+            border-top: 10px solid transparent;
+        }
+
+        .myTable {
+            border-top: 30px solid transparent;
+        }
+
+        .myPTable {
+            border-top: 50px solid transparent;
+        }
+
+        caption {
+            font-size: 1.2em; /* 设置字体大小 */
+            font-weight: bold; /* 设置字体粗细 */
+            text-align: center; /* 设置文字居中对齐 */
+            padding: 10px; /* 设置内边距 */
+            background-color: #0abab5; /* 设置背景颜色 */
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- 在这里添加输入框 -->
+<div class="add">
+    <input type="text" id="name" placeholder="Name" style="border: 1px solid #ccc;"/>
+    <input type="email" class="multiculturalism" id="companies" placeholder="companies" list="users"
+           style="border: 1px solid #ccc;" multiple/>
+    <datalist id="users"></datalist>
+    <input type="date" id="date_from" placeholder="start_date" style="border: 1px solid #ccc;"/>
+    <input type="date" id="date_to" placeholder="end_date" style="border: 1px solid #ccc;"/>
+    <button onclick="addData()">Add</button>
+</div>
+
+<div class="myTable">
+    <!-- 在这里创建表格 -->
+    <table id="myTable">
+        <caption>My Trips</caption>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Companies</th>
+            <th>Date_from</th>
+            <th>Date_to</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        </tr>
+        <!-- 这里将来将添加数据 -->
+        </tbody>
+    </table>
+</div>
+
+<div class="myPTable">
+    <table id="myPTable">
+        <caption>My Participated Trips</caption>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Companies</th>
+            <th>Date_from</th>
+            <th>Date_to</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+        </tr>
+        <!-- 这里将来将添加数据 -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // 定义变量来存储数据
+    let data = [];
+    let dataP = [];
+    let users = [];
+
+    // 获取数据并渲染表格
+    function getData() {
+        fetch("/api/trips", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                data = json['data'];
+                renderTable();
+            });
+    }
+
+    // 获取数据并渲染表格
+    function getDataP() {
+        fetch("/api/tripsPart", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                dataP = json['data'];
+                renderTableP();
+            });
+    }
+
+    // 获取数据并渲染表格
+    function getUsers() {
+        fetch("/api/users", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'token': sessionStorage.getItem('token'),
+            },
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                users = json['data'];
+                const datalistElement = document.getElementById('users'); // 获取 datalist 元素
+                users.forEach(user => { // 循环遍历选项数组
+                    const optionElement = document.createElement('option'); // 创建 option 元素
+                    optionElement.id = user.id
+                    optionElement.value = user.username; // 设置 option 元素的值
+                    datalistElement.appendChild(optionElement); // 将 option 元素添加到 datalist 元素中
+                });
+                const multiculturalism = document.querySelectorAll('.multiculturalism');
+                multiculturalism.forEach((element) => {
+                    element.addEventListener('focusin', function () {
+                        this.setAttribute('type', 'email');
+                    });
+                    element.addEventListener('focusout', function () {
+                        this.setAttribute('type', 'text');
+                    });
+                });
+            });
+    }
+
+    // 渲染表格
+    function renderTable() {
+        const tableBody = document.querySelector("#myTable tbody");
+        tableBody.innerHTML = "";
+
+        data.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-id", row.id);
+            tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.name}</td>
+      <td>${row.companies}</td>
+      <td>${row.date_from.substring(0, 10)}</td>
+      <td>${row.date_to.substring(0, 10)}</td>
+      <td>
+        <button onclick="location.href='/detail/${row.id}'">Details</button>
+      </td>
+      <td>
+        <button onclick="editRow(${row.id})">Edit</button>
+        <button onclick="deleteRow(${row.id})">Delete</button>
+      </td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 渲染表格
+    function renderTableP() {
+        const tableBody = document.querySelector("#myPTable tbody");
+        tableBody.innerHTML = "";
+
+        dataP.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-id", row.id);
+            tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.name}</td>
+      <td>${row.companies}</td>
+      <td>${row.date_from.substring(0, 10)}</td>
+      <td>${row.date_to.substring(0, 10)}</td>
+      <td>
+        <button onclick="location.href='/detail/${row.id}'">Details</button>
+      </td>
+    `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 添加数据到表格
+    function addData() {
+        const name = document.querySelector("#name").value;
+        const companies = document.querySelector("#companies").value;
+        const date_from = document.querySelector("#date_from").value;
+        const date_to = document.querySelector("#date_to").value;
+
+        if (!name || !date_from || !date_to) {
+            alert("Please fill in all fields");
+            return;
+        }
+
+        let companiesArr = [];
+        companies.split(',').forEach(username => {
+            const usernameI = document.querySelector('#users option[value="' + username + '"]');
+            if (usernameI) companiesArr.push(usernameI.value)
+        })
+
+        const payload = {name, companiesArr, date_from, date_to};
+        fetch("/api/addTrip", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('error!')
+                }
+            });
+
+        document.querySelector("#name").value = "";
+        document.querySelector("#companies").value = "";
+        document.querySelector("#date_from").value = "";
+        document.querySelector("#date_to").value = "";
+    }
+
+    // 更新数据到表格
+    function updateData(id) {
+        const name = document.querySelector(`#name-${id}`).value;
+        const companies = document.querySelector(`#companies-${id}`).value;
+        const date_from = document.querySelector(`#dateFrom-${id}`).value;
+        const date_to = document.querySelector(`#dateTo-${id}`).value;
+
+        if (!name || !date_from || !date_to) {
+            alert("Please fill in all fields");
+            return;
+        }
+
+        let companiesArr = [];
+        companies.split(',').forEach(username => {
+            const usernameI = document.querySelector('#users option[value="' + username + '"]');
+            if (usernameI) companiesArr.push(usernameI.value)
+        })
+
+        const payload = {id, name, companiesArr, date_from, date_to};
+        fetch(`/api/updateTrip`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify(payload),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 删除数据
+    function deleteData(id) {
+        fetch(`/api/deleteTrip`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'token': sessionStorage.getItem('token'),
+            },
+            body: JSON.stringify({id}),
+        })
+            .then((response) => response.json())
+            .then(res => {
+                if (res['code'] === 200) {
+                    getData()
+                } else {
+                    alert('error!')
+                }
+            });
+    }
+
+    // 编辑行
+    function editRow(id) {
+        const tr = document.querySelector(`#myTable tr[data-id="${id}"]`);
+        const nameTd = tr.querySelector("td:nth-child(2)");
+        const companiesTd = tr.querySelector("td:nth-child(3)");
+        const dateFromTd = tr.querySelector("td:nth-child(4)");
+        const dateToTd = tr.querySelector("td:nth-child(5)");
+        const actionsTd = tr.querySelector("td:nth-child(7)");
+
+        const name = nameTd.innerHTML;
+        const companies = companiesTd.innerHTML;
+        const dateFrom = dateFromTd.innerHTML;
+        const dateTo = dateToTd.innerHTML;
+
+        nameTd.innerHTML = `<input type="text" id="name-${id}" value="${name}" />`;
+        companiesTd.innerHTML = `<input type="email" class="multiculturalism" list="users" id="companies-${id}" value="${companies}" multiple/>`;
+        dateFromTd.innerHTML = `<input type="date" id="dateFrom-${id}" value="${dateFrom}" />`;
+        dateToTd.innerHTML = `<input type="date" id="dateTo-${id}" value="${dateTo}" />`;
+        actionsTd.innerHTML = `
+    <button onclick="updateData(${id})">Save</button>
+    <button onclick="cancelEdit(${id}, '${name}', '${companies}', '${dateFrom}', '${dateTo}')">Cancel</button>
+  `;
+    }
+
+    // 取消编辑
+    function cancelEdit(id, name, companies, dateFrom, dateTo) {
+        const tr = document.querySelector(`#myTable tr[data-id="${id}"]`);
+        const nameTd = tr.querySelector("td:nth-child(2)");
+        const companiesTd = tr.querySelector("td:nth-child(3)");
+        const dateFromTd = tr.querySelector("td:nth-child(4)");
+        const dateToTd = tr.querySelector("td:nth-child(5)");
+        const actionsTd = tr.querySelector("td:nth-child(7)");
+
+        nameTd.innerHTML = name;
+        companiesTd.innerHTML = companies;
+        dateFromTd.innerHTML = dateFrom;
+        dateToTd.innerHTML = dateTo;
+        actionsTd.innerHTML = `
+    <button onclick="editRow(${id})">Edit</button>
+    <button onclick="deleteRow(${id})">Delete</button>
+  `;
+    }
+
+    // 删除行
+    function deleteRow(id) {
+        const confirmDelete = confirm("Are you sure you want to delete this row?");
+        if (confirmDelete) {
+            deleteData(id);
+        }
+    }
+
+    // 页面加载时获取数据
+    window.onload = function () {
+        getData();
+        getDataP();
+        getUsers();
+    };
+
+</script>
+</body>
+</html>
